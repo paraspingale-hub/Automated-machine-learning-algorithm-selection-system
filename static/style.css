@@ -20,7 +20,7 @@ body {
     overflow-x: hidden;
 }
 
-/* 3D Canvas Background */
+/* 3D Canvas Background Space */
 #bg-canvas {
     position: fixed;
     top: 0;
@@ -34,7 +34,7 @@ body {
     max-width: 1000px;
     margin: 0 auto;
     position: relative;
-    z-index: 1; /* Keep content above canvas */
+    z-index: 1;
 }
 
 header {
@@ -54,7 +54,7 @@ header h1 {
     color: var(--text-muted);
 }
 
-/* Glassmorphism Cards */
+/* Glassmorphism Layout Elements */
 .glass-card {
     background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(12px);
@@ -66,52 +66,7 @@ header h1 {
     margin-bottom: 2rem;
 }
 
-/* Info Section (How it works) */
-.info-section h2 {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-}
-
-.pipeline-steps {
-    display: flex;
-    gap: 1.5rem;
-    justify-content: space-between;
-}
-
-.step {
-    flex: 1;
-    text-align: center;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 12px;
-}
-
-.step-icon {
-    width: 40px;
-    height: 40px;
-    background: var(--accent-primary);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1.2rem;
-    margin: 0 auto 1rem auto;
-}
-
-.step h3 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-}
-
-.step p {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-/* Form Styles */
+/* Inputs & Form Elements */
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -171,7 +126,44 @@ input:focus, select:focus {
     display: none !important;
 }
 
-/* Results Formatting */
+/* Model Selection Checkbox System */
+.checkbox-toolbar {
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.8rem;
+    margin-top: 10px;
+}
+
+.custom-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.custom-checkbox:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.custom-checkbox input[type="checkbox"] {
+    accent-color: var(--accent-primary);
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin: 0;
+}
+
+/* Evaluation Output Display */
 .meta-info {
     text-align: center;
     color: var(--text-muted);
@@ -236,7 +228,7 @@ input:focus, select:focus {
     border: 1px solid #fca5a5;
 }
 
-/* Loader */
+/* Loading Animations */
 #loader {
     text-align: center;
     margin-top: 2rem;
@@ -254,11 +246,4 @@ input:focus, select:focus {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .pipeline-steps {
-        flex-direction: column;
-    }
 }

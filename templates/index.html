@@ -6,7 +6,6 @@
     <title>Smart ML Pipeline</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -20,27 +19,6 @@
         </header>
 
         <main>
-            <section class="info-section glass-card">
-                <h2>How It Works</h2>
-                <div class="pipeline-steps">
-                    <div class="step">
-                        <div class="step-icon">1</div>
-                        <h3>Intelligent Cleaning</h3>
-                        <p>Automatically handles missing values, removes extreme outliers, and encodes categorical text into numbers the models can understand.</p>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">2</div>
-                        <h3>Model Arena</h3>
-                        <p>Routes your data to up to 10 different algorithms (like Random Forest, XGBoost, or K-Means) to train them simultaneously.</p>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">3</div>
-                        <h3>Leaderboard</h3>
-                        <p>Evaluates every model using strict metrics (Accuracy, R2, or Silhouette Score) to find the absolute best fit for your dataset.</p>
-                    </div>
-                </div>
-            </section>
-
             <section class="upload-section glass-card">
                 <form id="ml-form">
                     <div class="form-group">
@@ -50,18 +28,18 @@
 
                     <div class="form-group">
                         <label for="ml_type">Learning Strategy</label>
-                        <select id="ml_type" name="ml_type" required onchange="toggleSupervisedFields()">
+                        <select id="ml_type" name="ml_type" required onchange="updateUI()">
                             <option value="SUPERVISED">Supervised (Predicting a known target)</option>
-                            <option value="UNSUPERVISED">Unsupervised (Finding hidden patterns/clusters)</option>
+                            <option value="UNSUPERVISED">Unsupervised (Finding hidden patterns)</option>
                         </select>
                     </div>
 
                     <div id="supervised-fields">
                         <div class="form-group">
                             <label for="problem_type">Prediction Type</label>
-                            <select id="problem_type" name="problem_type">
-                                <option value="CLASSIFICATION">Classification (Categorical output, e.g., Spam/Not Spam)</option>
-                                <option value="REGRESSION">Regression (Continuous output, e.g., Price, Age)</option>
+                            <select id="problem_type" name="problem_type" onchange="updateUI()">
+                                <option value="CLASSIFICATION">Classification (Categorical output)</option>
+                                <option value="REGRESSION">Regression (Continuous output)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -70,12 +48,24 @@
                         </div>
                     </div>
 
+                    <div class="form-group">
+                        <label>Select Algorithms to Run</label>
+                        <div class="checkbox-toolbar">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="selectAll" checked onchange="toggleSelectAll()">
+                                <span><strong>Select All Algorithms</strong></span>
+                            </label>
+                        </div>
+                        <div id="model-checkboxes" class="checkbox-grid">
+                            </div>
+                    </div>
+
                     <button type="submit" class="btn-primary" id="submit-btn">Initialize Pipeline</button>
                 </form>
                 
                 <div id="loader" class="hidden">
                     <div class="spinner"></div>
-                    <p>Processing data and training models...</p>
+                    <p>Processing data and training selected models...</p>
                 </div>
                 <div id="error-message" class="hidden error"></div>
             </section>
@@ -92,94 +82,60 @@
     </div>
 
     <script>
-        // --- 3D BACKGROUND LOGIC (Three.js) ---
+        // --- 3D BACKGROUND LOGIC (Unchanged) ---
         const canvas = document.getElementById('bg-canvas');
         const scene = new THREE.Scene();
-        // Soft, off-white background
         scene.background = new THREE.Color(0xf4f7f4); 
-
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
 
-        // Create a particle system (Nature/Dust motes aesthetic)
         const particlesGeometry = new THREE.BufferGeometry();
         const particlesCount = 700;
         const posArray = new Float32Array(particlesCount * 3);
-
-        for(let i = 0; i < particlesCount * 3; i++) {
-            // Spread particles over a wide area
-            posArray[i] = (Math.random() - 0.5) * 15;
-        }
-
+        for(let i = 0; i < particlesCount * 3; i++) posArray[i] = (Math.random() - 0.5) * 15;
         particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 
-        // Soft green particles
-        const material = new THREE.PointsMaterial({
-            size: 0.03,
-            color: 0x6e9f73, 
-            transparent: true,
-            opacity: 0.6,
-            blending: THREE.AdditiveBlending
-        });
-
+        const material = new THREE.PointsMaterial({ size: 0.03, color: 0x6e9f73, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
         const particlesMesh = new THREE.Points(particlesGeometry, material);
         scene.add(particlesMesh);
-
         camera.position.z = 5;
 
-        // Animation Loop
-        let mouseX = 0;
-        let mouseY = 0;
-        let targetX = 0;
-        let targetY = 0;
-        const windowHalfX = window.innerWidth / 2;
-        const windowHalfY = window.innerHeight / 2;
-
+        let mouseX = 0, mouseY = 0;
         document.addEventListener('mousemove', (event) => {
-            mouseX = (event.clientX - windowHalfX);
-            mouseY = (event.clientY - windowHalfY);
+            mouseX = (event.clientX - window.innerWidth / 2);
+            mouseY = (event.clientY - window.innerHeight / 2);
         });
 
         const clock = new THREE.Clock();
-
         function animate() {
             requestAnimationFrame(animate);
             const elapsedTime = clock.getElapsedTime();
-
-            targetX = mouseX * 0.001;
-            targetY = mouseY * 0.001;
-
-            // Gentle continuous rotation
-            particlesMesh.rotation.y += 0.001;
-            particlesMesh.rotation.x += 0.0005;
-
-            // Slight interactive sway
-            particlesMesh.rotation.y += 0.05 * (targetX - particlesMesh.rotation.y);
-            particlesMesh.rotation.x += 0.05 * (targetY - particlesMesh.rotation.x);
-
-            // Gentle vertical drift simulating rising elements
+            particlesMesh.rotation.y += 0.05 * (mouseX * 0.001 - particlesMesh.rotation.y);
+            particlesMesh.rotation.x += 0.05 * (mouseY * 0.001 - particlesMesh.rotation.x);
+            
             const positions = particlesGeometry.attributes.position.array;
-            for(let i = 1; i < particlesCount * 3; i+=3) {
-                positions[i] += Math.sin(elapsedTime + positions[i-1]) * 0.002;
-            }
+            for(let i = 1; i < particlesCount * 3; i+=3) positions[i] += Math.sin(elapsedTime + positions[i-1]) * 0.002;
             particlesGeometry.attributes.position.needsUpdate = true;
-
             renderer.render(scene, camera);
         }
         animate();
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
 
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
 
-        // --- PIPELINE UI LOGIC ---
-        function toggleSupervisedFields() {
+        // --- DYNAMIC MODEL SELECTION LOGIC ---
+        const modelDict = {
+            "SUPERVISED_CLASSIFICATION": ["Logistic Regression", "Decision Tree", "Random Forest", "SVM", "KNN", "Naive Bayes", "Gradient Boosting", "XGBoost", "AdaBoost", "Extra Trees"],
+            "SUPERVISED_REGRESSION": ["Linear Regression", "Ridge Regression", "Lasso Regression", "Decision Tree", "Random Forest", "Gradient Boosting", "XGBoost", "SVR", "KNN", "Extra Trees"],
+            "UNSUPERVISED": ["K-Means", "DBSCAN", "Hierarchical", "GMM", "PCA", "t-SNE", "Isolation Forest"]
+        };
+
+        function updateUI() {
             const mlType = document.getElementById('ml_type').value;
+            const probType = document.getElementById('problem_type').value;
             const supFields = document.getElementById('supervised-fields');
+            
+            // Toggle Supervised Fields
             if (mlType === 'UNSUPERVISED') {
                 supFields.style.display = 'none';
                 document.getElementById('target_col').required = false;
@@ -187,12 +143,51 @@
                 supFields.style.display = 'block';
                 document.getElementById('target_col').required = true;
             }
+
+            // Update Checkboxes
+            let key = mlType === "SUPERVISED" ? `${mlType}_${probType}` : mlType;
+            let models = modelDict[key];
+            const container = document.getElementById('model-checkboxes');
+            container.innerHTML = '';
+            
+            models.forEach(model => {
+                const label = document.createElement('label');
+                label.className = 'custom-checkbox';
+                label.innerHTML = `
+                    <input type="checkbox" name="models" value="${model}" class="model-cb" checked onchange="checkSelectAllState()">
+                    <span>${model}</span>
+                `;
+                container.appendChild(label);
+            });
+            document.getElementById('selectAll').checked = true;
         }
 
+        function toggleSelectAll() {
+            const isChecked = document.getElementById('selectAll').checked;
+            const checkboxes = document.querySelectorAll('.model-cb');
+            checkboxes.forEach(cb => cb.checked = isChecked);
+        }
+
+        function checkSelectAllState() {
+            const checkboxes = document.querySelectorAll('.model-cb');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            document.getElementById('selectAll').checked = allChecked;
+        }
+
+
+        // --- FORM SUBMISSION & CHART RENDERING ---
         let chartInstance = null;
 
         document.getElementById('ml-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // Validate at least one model is selected
+            const selectedModels = document.querySelectorAll('.model-cb:checked');
+            if(selectedModels.length === 0) {
+                alert("Please select at least one algorithm to run.");
+                return;
+            }
+
             const form = e.target;
             const formData = new FormData(form);
             
@@ -208,6 +203,8 @@
                 });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'Server error');
+                
+                if(result.data.length === 0) throw new Error("No results generated. Ensure selected models successfully ran.");
                 renderResults(result);
             } catch (error) {
                 document.getElementById('error-message').textContent = error.message;
@@ -259,21 +256,14 @@
             data.data.forEach((modelData, index) => {
                 const card = document.createElement('div');
                 card.className = `metric-card ${index === 0 ? 'top-model' : ''}`;
-                
-                let metricsHtml = Object.entries(modelData)
-                    .filter(([key]) => key !== 'Model')
-                    .map(([key, value]) => `<div class="metric-row"><span>${key}</span><strong>${value}</strong></div>`)
-                    .join('');
-
-                card.innerHTML = `
-                    <h3>${index === 0 ? '🏆 Best Model: ' : ''}${modelData.Model}</h3>
-                    <div class="metrics-list">${metricsHtml}</div>
-                `;
+                let metricsHtml = Object.entries(modelData).filter(([key]) => key !== 'Model').map(([key, value]) => `<div class="metric-row"><span>${key}</span><strong>${value}</strong></div>`).join('');
+                card.innerHTML = `<h3>${index === 0 ? '🏆 Best Model: ' : ''}${modelData.Model}</h3><div class="metrics-list">${metricsHtml}</div>`;
                 cardsContainer.appendChild(card);
             });
         }
 
-        toggleSupervisedFields();
+        // Initialize UI
+        updateUI();
     </script>
 </body>
 </html>

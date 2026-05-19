@@ -457,40 +457,35 @@ def extra_trees_regressor(X, y):
 # RUN ALL REGRESSION MODELS — Called by main.py
 # ======================================================
 
-def run_all_regression_models(X, y):
-    """
-    Main function called by main.py
-    Accepts cleaned X (features) and y (target)
-    Runs all regression models and returns results
-    """
-    print(f"\n{border}")
-    print(f"   RUNNING ALL REGRESSION MODELS")
-    print(f"{border}")
-    print(f"  Features : {X.shape[1]}")
-    print(f"  Samples  : {X.shape[0]}")
+def run_all_regression_models(X, y, selected_models=None):
+    print(f"\n{border}\n   RUNNING REGRESSION MODELS\n{border}")
+    
+    model_map = {
+        "Linear Regression": linear_regression_model,
+        "Ridge Regression": ridge_regression_model,
+        "Lasso Regression": lasso_regression_model,
+        "Decision Tree": decision_tree_regressor,
+        "Random Forest": random_forest_regressor,
+        "Gradient Boosting": gradient_boosting_regressor,
+        "XGBoost": xgboost_regressor,
+        "SVR": svr_model,
+        "KNN": knn_regressor,
+        "Extra Trees": extra_trees_regressor
+    }
+
+    models_to_run = []
+    if selected_models:
+        models_to_run = [model_map[name] for name in selected_models if name in model_map]
+    else:
+        models_to_run = list(model_map.values())
 
     results = []
-
-    models = [
-        linear_regression_model,
-        ridge_regression_model,
-        lasso_regression_model,
-        decision_tree_regressor,
-        random_forest_regressor,
-        gradient_boosting_regressor,
-        xgboost_regressor,
-        svr_model,
-        knn_regressor,
-        extra_trees_regressor
-    ]
-
-    for model_func in models:
+    for model_func in models_to_run:
         try:
             result = model_func(X, y)
-            if result:
-                results.append(result)
+            if result: results.append(result)
         except Exception as e:
-            print(f"\n  ERROR in {model_func.__name__}: {e}")
+            print(f"  ERROR in {model_func.__name__}: {e}")
             continue
 
     return results

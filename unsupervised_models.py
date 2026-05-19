@@ -391,71 +391,39 @@ def isolation_forest_model(X):
 # RUN ALL UNSUPERVISED MODELS — Called by main.py
 # ======================================================
 
-def run_all_unsupervised_models(X):
-    """
-    Main function called by main.py
-    Accepts cleaned X (no target column)
-    Runs all unsupervised models and returns results
-    """
-    print(f"\n{border}")
-    print(f"  RUNNING ALL UNSUPERVISED MODELS")
-    print(f"{border}")
-    print(f"  Features : {X.shape[1]}")
-    print(f"  Samples  : {X.shape[0]}")
-
-    # Scale data
-    scaler  = StandardScaler()
+def run_all_unsupervised_models(X, selected_models=None):
+    print(f"\n{border}\n  RUNNING UNSUPERVISED MODELS\n{border}")
+    scaler = StandardScaler()
     X_array = scaler.fit_transform(X)
 
+    model_map = {
+        "K-Means": kmeans_model,
+        "DBSCAN": dbscan_model,
+        "Hierarchical": hierarchical_model,
+        "GMM": gmm_model,
+        "PCA": pca_analysis,
+        "t-SNE": tsne_analysis,
+        "Isolation Forest": isolation_forest_model
+    }
+
+    models_to_run = []
+    if selected_models:
+        models_to_run = [model_map[name] for name in selected_models if name in model_map]
+    else:
+        models_to_run = list(model_map.values())
+
     all_results = []
-
-    # -----------------------------------------------
-    # Clustering Models
-    # -----------------------------------------------
-    print(f"\n  --- CLUSTERING MODELS ---")
-
-    clustering_models = [
-        kmeans_model,
-        dbscan_model,
-        hierarchical_model,
-        gmm_model
-    ]
-
-    for model_func in clustering_models:
+    for model_func in models_to_run:
         try:
-            result = model_func(X_array)
-            if result:
-                all_results.append(result)
+            # PCA and t-SNE return different structures, handle carefully
+            if model_func.__name__ == 'pca_analysis':
+                res, _ = model_func(X_array)
+                all_results.append(res)
+            else:
+                res = model_func(X_array)
+                if res: all_results.append(res)
         except Exception as e:
-            print(f"\n  ERROR in {model_func.__name__}: {e}")
+            print(f"  ERROR in {model_func.__name__}: {e}")
             continue
-
-    # -----------------------------------------------
-    # Dimensionality Reduction
-    # -----------------------------------------------
-    print(f"\n  --- DIMENSIONALITY REDUCTION ---")
-
-    try:
-        pca_result, X_pca = pca_analysis(X_array)
-        all_results.append(pca_result)
-    except Exception as e:
-        print(f"\n  ERROR in PCA: {e}")
-
-    try:
-        tsne_result = tsne_analysis(X_array)
-        all_results.append(tsne_result)
-    except Exception as e:
-        print(f"\n  ERROR in t-SNE: {e}")
-
-    # -----------------------------------------------
-    # Anomaly Detection
-    # -----------------------------------------------
-    print(f"\n  --- ANOMALY DETECTION ---")
-
-    try:
-        iso_result = isolation_forest_model(X_array)
-        all_results.append(iso_result)
-    except Exception as e:
-        print(f"\n  ERROR in Isolation Forest: {e}")
 
     return all_results

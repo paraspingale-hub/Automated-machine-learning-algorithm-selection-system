@@ -406,41 +406,39 @@ def extra_trees_model(X, y):
 # RUN ALL MODELS — Called by main.py
 # ======================================================
 
-def run_all_classification_models(X, y):
-    """
-    Main function called by main.py
-    Accepts cleaned X (features) and y (target)
-    Runs all classification models and returns results
-    """
-    print(f"\n{border}")
-    print(f"   RUNNING ALL CLASSIFICATION MODELS")
-    print(f"{border}")
-    print(f"  Features : {X.shape[1]}")
-    print(f"  Samples  : {X.shape[0]}")
-    print(f"  Classes  : {y.nunique()}")
+def run_all_classification_models(X, y, selected_models=None):
+    print(f"\n{border}\n   RUNNING CLASSIFICATION MODELS\n{border}")
+    
+    # Map frontend string names to the python functions
+    model_map = {
+        "Logistic Regression": logistic_regression_model,
+        "Decision Tree": decision_tree_model,
+        "Random Forest": random_forest_model,
+        "SVM": svm_model,
+        "KNN": knn_model,
+        "Naive Bayes": naive_bayes_model,
+        "Gradient Boosting": gradient_boosting_model,
+        "XGBoost": xgboost_model,
+        "AdaBoost": adaboost_model,
+        "Extra Trees": extra_trees_model
+    }
+
+    # Filter models based on user selection
+    models_to_run = []
+    if selected_models:
+        models_to_run = [model_map[name] for name in selected_models if name in model_map]
+    else:
+        models_to_run = list(model_map.values())
 
     results = []
-
-    models = [
-        logistic_regression_model,
-        decision_tree_model,
-        random_forest_model,
-        svm_model,
-        knn_model,
-        naive_bayes_model,
-        gradient_boosting_model,
-        xgboost_model,
-        adaboost_model,
-        extra_trees_model
-    ]
-
-    for model_func in models:
+    for model_func in models_to_run:
         try:
             result = model_func(X, y)
-            if result:
-                results.append(result)
+            if result: results.append(result)
         except Exception as e:
-            print(f"\n  ERROR in {model_func.__name__}: {e}")
+            print(f"  ERROR in {model_func.__name__}: {e}")
             continue
 
     return results
+
+    
