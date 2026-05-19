@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart ML Pipeline</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="container">
+        <header>
+            <h1>Smart ML Pipeline</h1>
+            <p class="subtitle">Automated data processing and model evaluation engine.</p>
+        </header>
+
+        <main>
+            <section class="info-section glass-card">
+                <h2>How It Works</h2>
+                <div class="pipeline-steps">
+                    <div class="step">
+                        <div class="step-icon">1</div>
+                        <h3>Intelligent Cleaning</h3>
+                        <p>Automatically handles missing values, removes extreme outliers, and encodes categorical text into numbers the models can understand.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">2</div>
+                        <h3>Model Arena</h3>
+                        <p>Routes your data to up to 10 different algorithms (like Random Forest, XGBoost, or K-Means) to train them simultaneously.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">3</div>
+                        <h3>Leaderboard</h3>
+                        <p>Evaluates every model using strict metrics (Accuracy, R2, or Silhouette Score) to find the absolute best fit for your dataset.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="upload-section glass-card">
+                <form id="ml-form">
+                    <div class="form-group">
+                        <label for="file">Dataset Upload (.csv, .xlsx, .json)</label>
+                        <input type="file" id="file" name="file" required accept=".csv,.xlsx,.xls,.json">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ml_type">Learning Strategy</label>
+                        <select id="ml_type" name="ml_type" required onchange="toggleSupervisedFields()">
+                            <option value="SUPERVISED">Supervised (Predicting a known target)</option>
+                            <option value="UNSUPERVISED">Unsupervised (Finding hidden patterns/clusters)</option>
+                        </select>
+                    </div>
+
+                    <div id="supervised-fields">
+                        <div class="form-group">
+                            <label for="problem_type">Prediction Type</label>
+                            <select id="problem_type" name="problem_type">
+                                <option value="CLASSIFICATION">Classification (Categorical output, e.g., Spam/Not Spam)</option>
+                                <option value="REGRESSION">Regression (Continuous output, e.g., Price, Age)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="target_col">Target Column Name</label>
+                            <input type="text" id="target_col" name="target_col" placeholder="Exact name of the column to predict">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submit-btn">Initialize Pipeline</button>
+                </form>
+                
+                <div id="loader" class="hidden">
+                    <div class="spinner"></div>
+                    <p>Processing data and training models...</p>
+                </div>
+                <div id="error-message" class="hidden error"></div>
+            </section>
+
+            <section id="results-section" class="hidden glass-card">
+                <h2>Evaluation Leaderboard</h2>
+                <div class="meta-info" id="meta-info"></div>
+                <div class="chart-container">
+                    <canvas id="leaderboardChart"></canvas>
+                </div>
+                <div id="cards-container" class="cards-grid"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // --- 3D BACKGROUND LOGIC (Three.js) ---
+        const canvas = document.getElementById('bg-canvas');
+        const scene = new THREE.Scene();
+        // Soft, off-white background
+        scene.background = new THREE.Color(0xf4f7f4); 
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Create a particle system (Nature/Dust motes aesthetic)
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 700;
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for(let i = 0; i < particlesCount * 3; i++) {
+            // Spread particles over a wide area
+            posArray[i] = (Math.random() - 0.5) * 15;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+        // Soft green particles
+        const material = new THREE.PointsMaterial({
+            size: 0.03,
+            color: 0x6e9f73, 
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particlesMesh = new THREE.Points(particlesGeometry, material);
+        scene.add(particlesMesh);
+
+        camera.position.z = 5;
+
+        // Animation Loop
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetX = 0;
+        let targetY = 0;
+        const windowHalfX = window.innerWidth / 2;
+        const windowHalfY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX - windowHalfX);
+            mouseY = (event.clientY - windowHalfY);
+        });
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            targetX = mouseX * 0.001;
+            targetY = mouseY * 0.001;
+
+            // Gentle continuous rotation
+            particlesMesh.rotation.y += 0.001;
+            particlesMesh.rotation.x += 0.0005;
+
+            // Slight interactive sway
+            particlesMesh.rotation.y += 0.05 * (targetX - particlesMesh.rotation.y);
+            particlesMesh.rotation.x += 0.05 * (targetY - particlesMesh.rotation.x);
+
+            // Gentle vertical drift simulating rising elements
+            const positions = particlesGeometry.attributes.position.array;
+            for(let i = 1; i < particlesCount * 3; i+=3) {
+                positions[i] += Math.sin(elapsedTime + positions[i-1]) * 0.002;
+            }
+            particlesGeometry.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- PIPELINE UI LOGIC ---
+        function toggleSupervisedFields() {
+            const mlType = document.getElementById('ml_type').value;
+            const supFields = document.getElementById('supervised-fields');
+            if (mlType === 'UNSUPERVISED') {
+                supFields.style.display = 'none';
+                document.getElementById('target_col').required = false;
+            } else {
+                supFields.style.display = 'block';
+                document.getElementById('target_col').required = true;
+            }
+        }
+
+        let chartInstance = null;
+
+        document.getElementById('ml-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('results-section').classList.add('hidden');
+            document.getElementById('error-message').classList.add('hidden');
+            document.getElementById('submit-btn').disabled = true;
+
+            try {
+                const response = await fetch('/run_pipeline', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Server error');
+                renderResults(result);
+            } catch (error) {
+                document.getElementById('error-message').textContent = error.message;
+                document.getElementById('error-message').classList.remove('hidden');
+            } finally {
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('submit-btn').disabled = false;
+            }
+        });
+
+        function renderResults(data) {
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('meta-info').textContent = `Successfully evaluated ${data.samples} samples across ${data.features} features.`;
+            
+            const models = data.data.map(d => d.Model);
+            const scores = data.data.map(d => d[data.metric]);
+            
+            const ctx = document.getElementById('leaderboardChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: models,
+                    datasets: [{
+                        label: data.metric,
+                        data: scores,
+                        backgroundColor: scores.map((_, i) => i === 0 ? 'rgba(79, 121, 66, 0.8)' : 'rgba(143, 188, 143, 0.6)'),
+                        borderColor: scores.map((_, i) => i === 0 ? '#4F7942' : '#8FBC8F'),
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            const cardsContainer = document.getElementById('cards-container');
+            cardsContainer.innerHTML = '';
+            
+            data.data.forEach((modelData, index) => {
+                const card = document.createElement('div');
+                card.className = `metric-card ${index === 0 ? 'top-model' : ''}`;
+                
+                let metricsHtml = Object.entries(modelData)
+                    .filter(([key]) => key !== 'Model')
+                    .map(([key, value]) => `<div class="metric-row"><span>${key}</span><strong>${value}</strong></div>`)
+                    .join('');
+
+                card.innerHTML = `
+                    <h3>${index === 0 ? '🏆 Best Model: ' : ''}${modelData.Model}</h3>
+                    <div class="metrics-list">${metricsHtml}</div>
+                `;
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        toggleSupervisedFields();
+    </script>
+</body>
+</html>

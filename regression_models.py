@@ -319,7 +319,7 @@ def xgboost_regressor(X, y):
     print("  Type    : Extreme Gradient Boosting")
     print("  Best For: Large datasets, Missing values ok")
 
-    X_train, X_test, y_train, y_test = split_data(X, y)
+    X_train, X_test, y_train, y_test = split_data(X, y, random_state=42 )
 
     model = XGBRegressor(
         n_estimators=100,
@@ -356,7 +356,7 @@ def svr_model(X, y):
     print("  Type    : Margin-based Regression")
     print("  Best For: Small-medium datasets, Non-linear")
 
-    X_train, X_test, y_train, y_test = split_data(X, y)
+    X_train, X_test, y_train, y_test = split_data(X, y , random_state=42 )
 
     model  = SVR(kernel='rbf', C=1.0, epsilon=0.1)
     model.fit(X_train, y_train)
@@ -386,7 +386,7 @@ def knn_regressor(X, y):
     print("  Type    : Instance-based Regression")
     print("  Best For: Small datasets, Local patterns")
 
-    X_train, X_test, y_train, y_test = split_data(X, y)
+    X_train, X_test, y_train, y_test = split_data(X, y, random_state=42 )
 
     # Find best K
     print("\n  Finding best K...")
